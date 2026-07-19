@@ -1,0 +1,9 @@
+# Offline vendor bundle — large third-party binaries (~50 MB incl. OCR lang
+# data + WASM core + CJK font). Reproduce with `node scripts/fetch-vendor.mjs`
+# rather than committing (Charter "no large binaries in git" norm).
+public/vendor/
+
+# local test artifact
+public/sample.pdf
+
+node_modules/

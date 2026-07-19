@@ -1,0 +1,55 @@
+{
+  "@context": "https://etzhayyim.com/ns/kotodama/v1",
+  "@id": "did:web:etzhayyim.com:actor:tsuzuri",
+  "name": "tsuzuri",
+  "nanoid": "tsuzr100",
+  "project": "tsuzuri",
+  "runtimeType": "logical",
+  "performerType": "system",
+  "uiType": "ameno",
+  "profile": {
+    "displayName": "綴 (tsuzuri) — Adobe非依存 PDF editor",
+    "description": "Adobe-independent, in-browser (WASM/JS) PDF editor. Merge/split/rotate/delete/reorder, JP-font subset text annotation, OCR (tesseract.js), metadata — all client-side. Files never leave the device. No Adobe, no AGPL.",
+    "avatar": "綴",
+    "isBot": false,
+    "agentType": "reactive",
+    "operator": "etzhayyim",
+    "capabilities": [
+      "pdf-open-render",
+      "page-merge-split-rotate-delete-reorder",
+      "text-annotation-cjk-subset-embed",
+      "ocr-tesseract-wasm",
+      "metadata-edit"
+    ],
+    "protocols": ["xrpc"],
+    "embedDisabled": false
+  },
+  "dependencies": {
+    "no-adobe": true,
+    "libraries": [
+      { "name": "pdf-lib", "version": "1.17.1", "license": "MIT", "role": "edit+save" },
+      { "name": "@pdf-lib/fontkit", "version": "1.1.1", "license": "MIT", "role": "cjk-font-embed" },
+      { "name": "pdfjs-dist", "version": "4.7.76", "license": "Apache-2.0", "role": "render" },
+      { "name": "tesseract.js", "version": "5.1.1", "license": "Apache-2.0", "role": "ocr-wasm" },
+      { "name": "Sawarabi Gothic", "version": "main", "license": "OFL-1.1", "role": "embedded-jp-font" }
+    ],
+    "excluded": ["MuPDF (AGPL)", "Ghostscript (AGPL)", "any Adobe SDK/service"]
+  },
+  "governance": {
+    "raci": "responsible",
+    "classification": "user-document-local-only",
+    "constitutionalGates": [
+      "G1-files-never-leave-device-no-upload",
+      "G2-no-server-held-key-no-server-at-all",
+      "G3-license-apache2-charter-rider-bundles-mit-apache-ofl-only",
+      "G4-no-adobe-no-agpl-permissive-default-preserved",
+      "G5-no-ads-no-tracking-no-addictive-design"
+    ],
+    "license": "Apache-2.0 + etzhayyim Charter Compliance Rider v2.0"
+  },
+  "hardening": {
+    "vendorScript": "scripts/fetch-vendor.mjs",
+    "offlineImportmap": "public/vendor/importmap.vendored.json",
+    "csp": "default-src 'self'; connect-src 'self' (egress-zero after vendoring)"
+  }
+}

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!--
+  tsuzuri 綴 — Adobe-independent, in-browser PDF editor
+  SPDX-License-Identifier: Apache-2.0
+  etzhayyim Charter Compliance Rider v2.0 (see /CHARTER-RIDER.md)
+  No file ever leaves the device. All processing is client-side WASM/JS.
+-->
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>綴 tsuzuri — PDF editor (Adobe-free, in-browser)</title>
+
+<!--
+  Dependency resolution switch. DEFAULT = esm.sh CDN (works out of the box;
+  the PDF still never leaves the device). For full offline + Charter §2
+  supply-chain hardening, run `node scripts/fetch-vendor.mjs` and replace the
+  block below with the contents of public/vendor/importmap.vendored.json
+  (and uncomment the CSP meta). All bare specifiers below are the only place
+  CDN URLs live — tsuzuri.js imports by bare name.
+-->
+<script type="importmap">
+{
+  "imports": {
+    "pdf-lib": "https://esm.sh/pdf-lib@1.17.1",
+    "@pdf-lib/fontkit": "https://esm.sh/@pdf-lib/fontkit@1.1.1",
+    "pdfjs-dist": "https://esm.sh/pdfjs-dist@4.7.76/build/pdf.mjs",
+    "pdfjs-dist/worker": "https://esm.sh/pdfjs-dist@4.7.76/build/pdf.worker.mjs",
+    "tesseract.js": "https://esm.sh/tesseract.js@5.1.1"
+  }
+}
+</script>
+<!-- VENDORED LOCKDOWN (enable after fetch-vendor): forbids all network egress.
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'">
+-->
+
+<style>
+  :root {
+    --bg: #14110f; --panel: #1d1916; --panel-2: #251f1b; --ink: #efe7dc;
+    --muted: #9a8f82; --line: #36302a; --accent: #c98a3a; --accent-ink: #1a140d;
+    --danger: #b4503c; --ok: #5d8a4a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+  header { display: flex; align-items: center; gap: 14px; padding: 10px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .5px; font-weight: 600; }
+  header h1 b { color: var(--accent); font-weight: 700; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  header .spacer { flex: 1; }
+  .badge { font-size: 11px; color: var(--muted); border: 1px solid var(--line);
+    border-radius: 999px; padding: 2px 9px; }
+  main { display: grid; grid-template-columns: 220px 1fr 320px; min-height: 0; }
+  .col { min-height: 0; overflow: auto; }
+  #thumbs { background: var(--panel); border-right: 1px solid var(--line); padding: 10px; }
+  #thumbs .thumb { position: relative; border: 2px solid transparent; border-radius: 6px;
+    margin-bottom: 10px; cursor: pointer; background: #0c0a09; }
+  #thumbs .thumb.active { border-color: var(--accent); }
+  #thumbs .thumb canvas { width: 100%; display: block; border-radius: 4px; }
+  #thumbs .thumb .n { position: absolute; top: 4px; left: 6px; font-size: 11px;
+    color: var(--ink); background: rgba(0,0,0,.55); padding: 0 6px; border-radius: 4px; }
+  #stage { background: #0c0a09; display: flex; align-items: flex-start; justify-content: center;
+    padding: 22px; }
+  #stage canvas { background: #fff; box-shadow: 0 8px 40px rgba(0,0,0,.55); max-width: 100%; cursor: crosshair; }
+  #side { background: var(--panel); border-left: 1px solid var(--line); padding: 14px; }
+  .group { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px;
+    background: var(--panel-2); }
+  .group h3 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .8px;
+    color: var(--muted); font-weight: 600; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .row + .row { margin-top: 8px; }
+  button { background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 11px; font-size: 13px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.danger:hover { border-color: var(--danger); color: var(--danger); }
+  button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  input[type=text], input[type=number] { background: #0c0a09; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font-size: 13px; width: 100%; }
+  input[type=number] { width: 64px; }
+  label.f { display: block; font-size: 11px; color: var(--muted); margin: 0 0 4px; }
+  #ocrout { white-space: pre-wrap; font: 12px/1.5 ui-monospace, monospace; color: var(--ink);
+    background: #0c0a09; border: 1px solid var(--line); border-radius: 6px; padding: 8px;
+    max-height: 220px; overflow: auto; }
+  #drop { border: 2px dashed var(--line); border-radius: 12px; padding: 48px; text-align: center;
+    color: var(--muted); margin: auto; max-width: 460px; }
+  #drop.hot { border-color: var(--accent); color: var(--ink); }
+  #empty { display: flex; height: 100%; align-items: center; justify-content: center; }
+  footer { padding: 7px 16px; background: var(--panel); border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 12px; display: flex; gap: 14px; align-items: center; }
+  footer #status { color: var(--ink); }
+  .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+  <header>
+    <h1><b>綴</b> tsuzuri</h1>
+    <span class="sub">Adobe非依存・端末内完結 PDF editor</span>
+    <span class="spacer"></span>
+    <span class="badge">no upload · WASM</span>
+    <span class="badge">Apache-2.0</span>
+  </header>
+
+  <main>
+    <aside id="thumbs" class="col"></aside>
+
+    <section id="stage" class="col">
+      <div id="empty">
+        <div id="drop">
+          <div style="font-size:32px">📄</div>
+          <p><b>PDF をドラッグ&ドロップ</b><br />または下のボタンで開く</p>
+          <button class="primary" id="open-empty">PDF を開く</button>
+          <p class="hint">ファイルはこの端末から外に出ません（サーバー送信なし）</p>
+        </div>
+      </div>
+      <canvas id="page" hidden></canvas>
+    </section>
+
+    <aside id="side" class="col">
+      <div class="group">
+        <h3>ファイル</h3>
+        <div class="row">
+          <button id="open">開く</button>
+          <button id="merge" disabled>結合(追加)</button>
+          <button class="primary" id="save" disabled>保存・DL</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>ページ操作（選択ページ）</h3>
+        <div class="row">
+          <button id="rot-l" disabled>⟲ 左回転</button>
+          <button id="rot-r" disabled>⟳ 右回転</button>
+        </div>
+        <div class="row">
+          <button id="up" disabled>↑ 前へ</button>
+          <button id="down" disabled>↓ 後へ</button>
+          <button class="danger" id="del" disabled>🗑 削除</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>テキスト追記</h3>
+        <div class="row">
+          <button id="addtext" disabled>📝 配置モード</button>
+        </div>
+        <input type="text" id="textval" placeholder="追記する文字（日本語OK）" />
+        <div class="row" style="margin-top:8px">
+          <label class="f" style="margin:0">サイズ</label>
+          <input type="number" id="textsize" value="18" min="6" max="96" />
+        </div>
+        <p class="hint">配置モード ON → ページ上をクリックで配置。ASCIIはHelvetica、日本語はJPフォントを自動 subset 埋め込み。</p>
+      </div>
+
+      <div class="group">
+        <h3>抽出 / 分割</h3>
+        <div class="row">
+          <label class="f" style="margin:0">範囲</label>
+          <input type="text" id="range" placeholder="例 1-3,5" style="flex:1" />
+          <button id="extract" disabled>抽出DL</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>OCR（選択ページ）</h3>
+        <div class="row">
+          <input type="text" id="ocrlang" value="eng+jpn" style="flex:1" />
+          <button id="ocr" disabled>実行</button>
+          <button id="ocrdl" disabled>txtDL</button>
+        </div>
+        <div id="ocrout" style="margin-top:8px">—</div>
+      </div>
+
+      <div class="group">
+        <h3>メタデータ</h3>
+        <label class="f">タイトル</label>
+        <input type="text" id="meta-title" />
+        <label class="f" style="margin-top:8px">著者</label>
+        <input type="text" id="meta-author" />
+        <div class="row" style="margin-top:8px">
+          <button id="meta-save" disabled>反映</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <span>page <span id="pageno">–</span>/<span id="pagecount">–</span></span>
+    <span class="spacer" style="flex:1"></span>
+    <span id="status">PDF を開いてください</span>
+  </footer>
+
+  <input type="file" id="file" accept="application/pdf" hidden />
+  <input type="file" id="file-merge" accept="application/pdf" hidden />
+  <script type="module" src="./tsuzuri.js"></script>
+</body>
+</html>

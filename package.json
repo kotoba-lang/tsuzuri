@@ -1,0 +1,20 @@
+{
+  "name": "tsuzuri",
+  "version": "0.1.0",
+  "private": true,
+  "description": "綴 tsuzuri — Adobe-independent, in-browser (WASM) PDF editor. Files never leave the device.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8099 --directory public",
+    "serve": "python3 -m http.server 8099 --directory public",
+    "vendor": "node scripts/fetch-vendor.mjs",
+    "check": "node --check public/tsuzuri.js"
+  },
+  "comment_deps": "Loaded at runtime from esm.sh for the MVP; vendor into public/vendor/ for full offline + Charter §2 supply-chain hardening. Versions pinned in tsuzuri.js.",
+  "runtimeDependencies": {
+    "pdf-lib": "1.17.1 (MIT) — structural edit + save",
+    "pdfjs-dist": "4.7.76 (Apache-2.0) — render",
+    "tesseract.js": "5.1.1 (Apache-2.0) — WASM OCR"
+  }
+}

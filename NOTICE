@@ -1,0 +1,14 @@
+tsuzuri 綴
+Copyright (c) 2026 etzhayyim (עץ חיים / 天御柱)
+
+Licensed under the Apache License, Version 2.0, together with the
+etzhayyim Charter Compliance Rider v3.1 (see CHARTER-RIDER.md).
+
+This product bundles, at runtime, the following third-party works:
+  - pdf-lib       — MIT License        — https://github.com/Hopding/pdf-lib
+  - pdfjs-dist    — Apache License 2.0 — https://github.com/mozilla/pdf.js
+  - tesseract.js  — Apache License 2.0 — https://github.com/naptha/tesseract.js
+
+No Adobe software, SDK, or service is used or required. The AGPL-licensed
+MuPDF/Ghostscript family is intentionally NOT used to keep the permissive
+Apache-2.0 default intact (Charter Rider does not weaken to copyleft).
