@@ -70,7 +70,7 @@ PDF をドラッグ&ドロップ、または「開く」。すべてブラウザ
 - **正直なスコープ**: tsuzuri は DOM アプリで**単一 WASM コンポーネントではない**ため、ameno の
   `wasm-actor-loader`（`EtzhayyimWasmComponent` + CID 検証ロード）の対象ではない。service type は
   `EtzhayyimBrowserLocalApp`。実行モデル（端末内 WASM/JS）が ameno の browser-local に一致する、
-  という意味での統合。詳細は [`CLAUDE.md`](./CLAUDE.md)。
+  という意味での統合。詳細は [`AGENTS.md`](./AGENTS.md)。
 
 ## 依存解決の仕組み（importmap 1点切替）
 
